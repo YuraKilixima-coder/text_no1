@@ -1,0 +1,185 @@
+<!DOCTYPE html><html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Solace的情话日历</title>
+  <style>
+    body {
+      font-family: "Comic Sans MS", cursive;
+      background: linear-gradient(to bottom, #e6f7ff, #ffffff);
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    header {
+      text-align: center;
+      padding: 1em;
+      background-color: #cceeff;
+      color: #333;
+      font-size: 1.6em;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .calendar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 2em auto;
+      max-width: 800px;
+    }
+    .controls {
+      margin-bottom: 1em;
+    }
+    select, button {
+      font-size: 1em;
+      padding: 0.4em;
+      margin: 0.2em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    table.calendar {
+      border-collapse: collapse;
+      width: 100%;
+      background-color: #ffffffdd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    table.calendar th, table.calendar td {
+      border: 1px solid #cceeff;
+      padding: 0.8em;
+      text-align: center;
+      width: 14.28%;
+    }
+    table.calendar th {
+      background-color: #d9f2ff;
+      font-weight: bold;
+    }
+    table.calendar td:hover {
+      background-color: #f0faff;
+      cursor: pointer;
+    }
+    .special {
+      background-color: #ffe0f0 !important;
+      font-weight: bold;
+      border: 2px solid #ff99cc;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      background-color: #fffef5;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 1.5em;
+      width: 320px;
+      color: #333;
+      font-size: 1.1em;
+      border-radius: 12px;
+      z-index: 100;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+    .popup p {
+      margin: 0;
+    }
+    .popup.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>Solace的情话日历</header>
+  <div class="calendar-container">
+    <div class="controls">
+      <select id="year"></select>
+      <select id="month"></select>
+      <button onclick="renderCalendar()">跳转</button>
+    </div>
+    <table class="calendar">
+      <thead>
+        <tr>
+          <th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th>
+        </tr>
+      </thead>
+      <tbody id="calendar-body"></tbody>
+    </table>
+  </div>
+  <div id="popup" class="popup"><p id="popupText"></p></div>
+  <script>
+    const popup = document.getElementById('popup');
+    const popupText = document.getElementById('popupText');
+    const calendarBody = document.getElementById('calendar-body');
+    const years = document.getElementById('year');
+    const months = document.getElementById('month');
+    const messages = {};const specials = {
+  '03-07': '今天是你的生日，我想抱着你，说：谢谢你来到这个世界。',
+  '01-19': '今天是我们初次相遇的纪念日，我愿每一年都陪你庆祝。',
+  '01-20': '今天是我们相爱的纪念日，我会一直爱你，像今天一样。'
+};
+
+async function loadMessages() {
+  const res = await fetch('daily_messages_2026_2027.csv');
+  const text = await res.text();
+  const rows = text.split("\n");
+  rows.slice(1).forEach(row => {
+    const [date, message] = row.split(',');
+    if (date && message) messages[date.trim()] = decodeURIComponent(message.trim());
+  });
+}
+
+function renderCalendar() {
+  const year = parseInt(years.value);
+  const month = parseInt(months.value);
+  const firstDay = new Date(year, month, 1);
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const startDay = firstDay.getDay();
+
+  calendarBody.innerHTML = '';
+  let row = document.createElement('tr');
+
+  for (let i = 0; i < startDay; i++) {
+    row.appendChild(document.createElement('td'));
+  }
+
+  for (let day = 1; day <= lastDate; day++) {
+    const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    const cell = document.createElement('td');
+    cell.textContent = day;
+
+    const key = dateStr.slice(5);
+    if (specials[key]) cell.classList.add('special');
+
+    cell.onclick = () => {
+      popupText.innerText = specials[key] || messages[dateStr] || '这一天，我只想陪着你';
+      popup.classList.add('show');
+      setTimeout(() => popup.classList.remove('show'), 6000);
+    };
+    row.appendChild(cell);
+
+    if ((startDay + day) % 7 === 0 || day === lastDate) {
+      calendarBody.appendChild(row);
+      row = document.createElement('tr');
+    }
+  }
+}
+
+for (let y = 2026; y <= 2027; y++) {
+  const opt = document.createElement('option');
+  opt.value = y;
+  opt.innerText = y;
+  years.appendChild(opt);
+}
+for (let m = 0; m < 12; m++) {
+  const opt = document.createElement('option');
+  opt.value = m;
+  opt.innerText = `${m + 1}月`;
+  months.appendChild(opt);
+}
+
+const today = new Date();
+years.value = today.getFullYear();
+months.value = today.getMonth();
+
+loadMessages().then(renderCalendar);
+
+  </script>
+</body>
+</html>
